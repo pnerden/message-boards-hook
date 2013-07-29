@@ -26,6 +26,7 @@ MBMessage message = messageDisplay.getMessage();
 MBCategory category = messageDisplay.getCategory();
 
 MBThread thread = messageDisplay.getThread();
+String threadTitle = MBMessageLocalServiceUtil.getMBMessage(thread.getRootMessageId()).getSubject();
 
 MBThread previousThread = messageDisplay.getPreviousThread();
 MBThread nextThread = messageDisplay.getNextThread();
@@ -33,31 +34,31 @@ MBThread nextThread = messageDisplay.getNextThread();
 String threadView = messageDisplay.getThreadView();
 
 MBThreadFlag threadFlag = MBThreadFlagLocalServiceUtil.getThreadFlag(themeDisplay.getUserId(), thread);
-
-String parentCategoryName = "message-boards-home";
-
-if (category != null) {
-	parentCategoryName = category.getName();
-}
-
-String backURLLabel = LanguageUtil.format(pageContext, "back-to-x", new Object[] {parentCategoryName});
-
 %>
 
-<div class="thread-buttons-top">
-	<c:choose>
-		<c:when test="<%= Validator.isNull(redirect) %>">
-			<portlet:renderURL var="backURL">
-				<portlet:param name="struts_action" value="/message_boards/view" />
-				<portlet:param name="mbCategoryId" value="<%= (category != null) ? String.valueOf(category.getCategoryId()) : String.valueOf(MBCategoryConstants.DEFAULT_PARENT_CATEGORY_ID) %>" />
-			</portlet:renderURL>
-				
-			<aui:button href="<%= backURL %>" cssClass="back-button" value="<%= backURLLabel %>" last="true" />
-		</c:when>
-		<c:otherwise>
-			<aui:button href="<%= redirect %>" cssClass="back-button" value="<%= backURLLabel %>" last="true" />
-		</c:otherwise>
-	</c:choose>
+<div class="thread-buttons thread-buttons-top">
+<c:choose>
+	<c:when test="<%= Validator.isNull(redirect) %>">
+		<portlet:renderURL var="backURL">
+			<portlet:param name="struts_action" value="/message_boards/view" />
+			<portlet:param name="mbCategoryId" value="<%= (category != null) ? String.valueOf(category.getCategoryId()) : String.valueOf(MBCategoryConstants.DEFAULT_PARENT_CATEGORY_ID) %>" />
+		</portlet:renderURL>
+
+		<liferay-ui:header
+			backLabel='<%= (category != null) ? category.getName() : "message-boards-home" %>'
+			backURL="<%= backURL.toString() %>"
+			localizeTitle="<%= false %>"
+			title="<%= threadTitle %>"
+		/>
+	</c:when>
+	<c:otherwise>
+		<liferay-ui:header
+			backURL="<%= redirect %>"
+			localizeTitle="<%= false %>"
+			title="<%= threadTitle %>"
+		/>
+	</c:otherwise>
+</c:choose>
 </div>
 
 <table cellpadding="0" cellspacing="0" class="thread-view-controls" width="100%">
@@ -293,7 +294,7 @@ String backURLLabel = LanguageUtil.format(pageContext, "back-to-x", new Object[]
 
 	<div class="message-scroll" id="<portlet:namespace />message_0"></div>
 
-	<c:if test='<%= threadView.equals(MBThreadConstants.THREAD_VIEW_COMBINATION) && (messages.size() > 1) %>'>
+	<c:if test="<%= threadView.equals(MBThreadConstants.THREAD_VIEW_COMBINATION) && (messages.size() > 1) %>">
 		<liferay-ui:toggle-area id="toggle_id_message_boards_view_message_thread">
 			<table class="toggle_id_message_boards_view_message_thread">
 
@@ -314,8 +315,12 @@ String backURLLabel = LanguageUtil.format(pageContext, "back-to-x", new Object[]
 		</liferay-ui:toggle-area>
 	</c:if>
 
+	<%
+	boolean viewableThread = false;
+	%>
+
 	<c:choose>
-		<c:when test='<%= threadView.equals(MBThreadConstants.THREAD_VIEW_TREE) %>'>
+		<c:when test="<%= threadView.equals(MBThreadConstants.THREAD_VIEW_TREE) %>">
 
 			<%
 			request.setAttribute(WebKeys.MESSAGE_BOARDS_TREE_WALKER, treeWalker);
@@ -325,68 +330,49 @@ String backURLLabel = LanguageUtil.format(pageContext, "back-to-x", new Object[]
 			request.setAttribute(WebKeys.MESSAGE_BOARDS_TREE_WALKER_THREAD, thread);
 			request.setAttribute(WebKeys.MESSAGE_BOARDS_TREE_WALKER_LAST_NODE, Boolean.valueOf(false));
 			request.setAttribute(WebKeys.MESSAGE_BOARDS_TREE_WALKER_DEPTH, new Integer(0));
+			request.setAttribute(WebKeys.MESSAGE_BOARDS_TREE_WALKER_VIEWABLE_THREAD, Boolean.FALSE.toString());
 			%>
 
 			<liferay-util:include page="/html/portlet/message_boards/view_thread_tree.jsp" />
+
+			<%
+			viewableThread = GetterUtil.getBoolean((String)request.getAttribute(WebKeys.MESSAGE_BOARDS_TREE_WALKER_VIEWABLE_THREAD));
+			%>
+
 		</c:when>
 		<c:otherwise>
 			<%@ include file="/html/portlet/message_boards/view_thread_flat.jspf" %>
 		</c:otherwise>
 	</c:choose>
-
-	<div class="thread-buttons-bottom">
-		<c:if test="<%= PropsValues.MESSAGE_BOARDS_THREAD_PREVIOUS_AND_NEXT_NAVIGATION_ENABLED %>">
-			<span class="thread-navigation-bottom">
-				<liferay-ui:message key="threads" />
 	
-				[
-	
-				<c:choose>
-					<c:when test="<%= previousThread != null %>">
-						<portlet:renderURL var="previousThreadURL">
-							<portlet:param name="struts_action" value="/message_boards/view_message" />
-							<portlet:param name="messageId" value="<%= String.valueOf(previousThread.getRootMessageId()) %>" />
-						</portlet:renderURL>
-	
-						<aui:a href="<%= previousThreadURL %>" label="previous" />
-					</c:when>
-					<c:otherwise>
-						<liferay-ui:message key="previous" />
-					</c:otherwise>
-				</c:choose>
-	
-				|
-	
-				<c:choose>
-					<c:when test="<%= nextThread != null %>">
-						<portlet:renderURL var="nextThreadURL">
-							<portlet:param name="struts_action" value="/message_boards/view_message" />
-							<portlet:param name="messageId" value="<%= String.valueOf(nextThread.getRootMessageId()) %>" />
-						</portlet:renderURL>
-	
-						<aui:a href="<%= nextThreadURL %>" label="next" />
-					</c:when>
-					<c:otherwise>
-						<liferay-ui:message key="next" />
-					</c:otherwise>
-				</c:choose>
-	
-				]
-			</span>
-		</c:if>
+	<div class="thread-buttons thread-buttons-bottom">
 		<c:choose>
 			<c:when test="<%= Validator.isNull(redirect) %>">
 				<portlet:renderURL var="backURL">
 					<portlet:param name="struts_action" value="/message_boards/view" />
 					<portlet:param name="mbCategoryId" value="<%= (category != null) ? String.valueOf(category.getCategoryId()) : String.valueOf(MBCategoryConstants.DEFAULT_PARENT_CATEGORY_ID) %>" />
 				</portlet:renderURL>
-					
-				<aui:button href="<%= backURL %>" cssClass="back-button" value="<%= backURLLabel %>" last="true" />
+		
+				<liferay-ui:header
+					backLabel='<%= (category != null) ? category.getName() : "message-boards-home" %>'
+					backURL="<%= backURL.toString() %>"
+					localizeTitle="<%= false %>"
+					title="<%= threadTitle %>"
+				/>
 			</c:when>
 			<c:otherwise>
-				<aui:button href="<%= redirect %>" cssClass="back-button" value="<%= backURLLabel %>" last="true" />
+				<liferay-ui:header
+					backURL="<%= redirect %>"
+					localizeTitle="<%= false %>"
+					title="<%= threadTitle %>"
+				/>
 			</c:otherwise>
 		</c:choose>
 	</div>
 
+	<c:if test="<%= !viewableThread %>">
+		<div class="portlet-msg-error">
+			<liferay-ui:message key="you-do-not-have-permission-to-access-the-requested-resource" />
+		</div>
+	</c:if>
 </div>
